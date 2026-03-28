@@ -1,25 +1,85 @@
-const ADMIN_KEY = 'CAMBIA_ESTA_CLAVE_SEGURA';
+// ─────────────────────────────────────────────────────────────────
+//  CONFIGURACIÓN CENTRAL
+//  Cambia SOLO estos valores si modificas el layout de la hoja.
+// ─────────────────────────────────────────────────────────────────
+
 const DEFAULT_SHEET_NAME = '📊 Registro Mensual';
 
-// Ajusta estos índices a tu layout real
-const HEADER_ROW_INDEX = 6;   // fila 7 visual
-const DATA_START_INDEX = 7;   // fila 8 visual
+const LAYOUT = {
+  HEADER_ROW_INDEX : 6,   // fila 7 visual
+  DATA_START_INDEX : 7,   // fila 8 visual
+  KPI_BLOCKS       : 5,   // bloques KPI (KPI1…KPI5)
+  KPI_BLOCK_OFFSET : 6,   // columna donde empieza el primer bloque (0-based)
+  KPI_BLOCK_SIZE   : 4,   // columnas por bloque: KPI, Meta, Real, Cumplimiento
+  COL_COLABORADOR  : 3,   // 0-based → columna D
+  COL_MES          : 4,
+  COL_ANO          : 5,
+  COL_PROMEDIO     : 26,  // 0-based → columna AA  (1-based: 27)
+  COL_SEMAFORO     : 27,  // columna AB  (1-based: 28)
+  COL_OBSERVACIONES: 28,  // columna AC  (1-based: 29)
+};
+
+const SEMAFORO = {
+  VERDE   : { label: 'Verde',    min: 0.85 },
+  AMARILLO: { label: 'Amarillo', min: 0.70 },
+  ROJO    : { label: 'Rojo',     min: 0    },
+};
+
+// Cabeceras canónicas (deben coincidir con el orden real de columnas)
+const MAPPED_HEADERS = [
+  'País', 'Área', 'Rol', 'Colaborador', 'Mes', 'Año',
+  'KPI1', 'Meta1', 'Real1', 'Cumplimiento1',
+  'KPI2', 'Meta2', 'Real2', 'Cumplimiento2',
+  'KPI3', 'Meta3', 'Real3', 'Cumplimiento3',
+  'KPI4', 'Meta4', 'Real4', 'Cumplimiento4',
+  'KPI5', 'Meta5', 'Real5', 'Cumplimiento5',
+  'Promedio %', 'Semáforo', 'Observaciones',
+];
+
+// ─────────────────────────────────────────────────────────────────
+//  HELPERS: clave de admin + autorización
+// ─────────────────────────────────────────────────────────────────
+
+/**
+ * Lee ADMIN_KEY desde las Propiedades del Script (nunca hardcodeada).
+ * Para configurarla: Extensiones → Apps Script → Configuración del proyecto
+ * → Propiedades de script → agregar ADMIN_KEY = <tu_clave>.
+ */
+function getAdminKey() {
+  const key = PropertiesService.getScriptProperties().getProperty('ADMIN_KEY');
+  if (!key) throw new Error('ADMIN_KEY no configurada en las propiedades del script.');
+  return key;
+}
+
+function assertAdminKey(provided) {
+  if (!provided || provided !== getAdminKey()) {
+    throw new Error('Clave de administrador inválida.');
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────
+//  ENTRY POINTS
+// ─────────────────────────────────────────────────────────────────
 
 function doGet(e) {
   try {
-    const action = (e.parameter.action || 'read').trim();
+    const action        = (e.parameter.action        || 'read').trim();
+    const spreadsheetId = (e.parameter.spreadsheetId || '').trim();
+    const gid           = (e.parameter.gid           || '').trim();
+    const sheetName     = (e.parameter.sheet         || DEFAULT_SHEET_NAME).trim();
 
+    // ── Validaciones básicas ──
     if (action !== 'read') {
       return jsonOutput({ ok: false, error: 'Acción GET no válida.' });
     }
-
-    const spreadsheetId = (e.parameter.spreadsheetId || '').trim();
-    const gid = (e.parameter.gid || '').trim();
-    const sheetName = (e.parameter.sheet || DEFAULT_SHEET_NAME).trim();
-
     if (!spreadsheetId) {
       return jsonOutput({ ok: false, error: 'Falta spreadsheetId.' });
     }
+
+    // ── Autorización opcional en GET ──
+    // Si quieres proteger las lecturas, descomenta las dos líneas siguientes:
+    // const readKey = (e.parameter.adminKey || '').trim();
+    // assertAdminKey(readKey);
 
     const sheet = getTargetSheet(spreadsheetId, gid, sheetName);
     if (!sheet) {
@@ -27,34 +87,21 @@ function doGet(e) {
     }
 
     const values = sheet.getDataRange().getDisplayValues();
-    if (values.length <= DATA_START_INDEX) {
+    if (values.length <= LAYOUT.DATA_START_INDEX) {
       return jsonOutput({
         ok: true,
         sheetName: sheet.getName(),
         gid: String(sheet.getSheetId()),
         total: 0,
-        data: []
+        data: [],
       });
     }
 
-    const rows = values.slice(DATA_START_INDEX);
-
-    const mappedHeaders = [
-      'País', 'Área', 'Rol', 'Colaborador', 'Mes', 'Año',
-      'KPI1', 'Meta1', 'Real1', 'Cumplimiento1',
-      'KPI2', 'Meta2', 'Real2', 'Cumplimiento2',
-      'KPI3', 'Meta3', 'Real3', 'Cumplimiento3',
-      'KPI4', 'Meta4', 'Real4', 'Cumplimiento4',
-      'KPI5', 'Meta5', 'Real5', 'Cumplimiento5',
-      'Promedio %', 'Semáforo', 'Observaciones'
-    ];
-
+    const rows = values.slice(LAYOUT.DATA_START_INDEX);
     const data = rows
       .map((row, idx) => {
-        const obj = { _rowNumber: idx + DATA_START_INDEX + 1 };
-        mappedHeaders.forEach((key, i) => {
-          obj[key] = row[i] || '';
-        });
+        const obj = { _rowNumber: idx + LAYOUT.DATA_START_INDEX + 1 };
+        MAPPED_HEADERS.forEach((key, i) => { obj[key] = row[i] ?? ''; });
         return obj;
       })
       .filter(r => String(r['Colaborador'] || '').trim() !== '');
@@ -64,244 +111,280 @@ function doGet(e) {
       sheetName: sheet.getName(),
       gid: String(sheet.getSheetId()),
       total: data.length,
-      data
+      data,
     });
 
-  } catch (error) {
-    return jsonOutput({ ok: false, error: error.message });
+  } catch (err) {
+    Logger.log('doGet error: ' + err.message);
+    return jsonOutput({ ok: false, error: err.message });
   }
 }
 
 function doPost(e) {
   try {
-    const payload = JSON.parse(e.postData.contents || '{}');
-    const action = String(payload.action || '').trim();
+    const payload       = JSON.parse(e.postData.contents || '{}');
+    const action        = String(payload.action        || '').trim();
     const spreadsheetId = String(payload.spreadsheetId || '').trim();
-    const gid = String(payload.gid || '').trim();
-    const sheetName = String(payload.sheet || DEFAULT_SHEET_NAME).trim();
-    const adminKey = String(payload.adminKey || '').trim();
-    const record = payload.record || {};
+    const gid           = String(payload.gid           ?? '').trim();
+    const sheetName     = String(payload.sheet         || DEFAULT_SHEET_NAME).trim();
+    const adminKey      = String(payload.adminKey      || '').trim();
+    const record        = payload.record || {};
 
     if (!spreadsheetId) {
       return jsonOutput({ ok: false, error: 'Falta spreadsheetId.' });
     }
 
-    if (adminKey !== ADMIN_KEY) {
-      return jsonOutput({ ok: false, error: 'Clave de administrador inválida.' });
-    }
+    // Lanza excepción si la clave es inválida
+    assertAdminKey(adminKey);
 
     const sheet = getTargetSheet(spreadsheetId, gid, sheetName);
     if (!sheet) {
       return jsonOutput({ ok: false, error: 'No se encontró la hoja.' });
     }
 
-    if (action === 'addCollaborator') {
-      return addCollaborator(sheet, record);
+    switch (action) {
+      case 'addCollaborator': return addCollaborator(sheet, record);
+      case 'addGoal'        : return addGoal(sheet, record);
+      case 'updateResult'   : return updateResult(sheet, record);
+      default               : return jsonOutput({ ok: false, error: 'Acción POST no válida: ' + action });
     }
 
-    if (action === 'addGoal') {
-      return addGoal(sheet, record);
-    }
-
-    if (action === 'updateResult') {
-      return updateResult(sheet, record);
-    }
-
-    return jsonOutput({ ok: false, error: 'Acción POST no válida.' });
-
-  } catch (error) {
-    return jsonOutput({ ok: false, error: error.message });
+  } catch (err) {
+    Logger.log('doPost error: ' + err.message);
+    return jsonOutput({ ok: false, error: err.message });
   }
 }
 
-function addCollaborator(sheet, record) {
-  const row = buildBaseRow(record);
-  sheet.appendRow(row);
+// ─────────────────────────────────────────────────────────────────
+//  ACCIONES
+// ─────────────────────────────────────────────────────────────────
 
-  return jsonOutput({
-    ok: true,
-    message: 'Colaborador agregado correctamente.'
-  });
+function addCollaborator(sheet, record) {
+  const collaborator = String(record.colaborador || '').trim();
+  const mes          = String(record.mes         || '').trim();
+
+  if (!collaborator || !mes) {
+    return jsonOutput({ ok: false, error: 'Se requieren colaborador y mes.' });
+  }
+
+  // Evitar duplicados colaborador+mes
+  if (findRow(sheet, collaborator, mes) !== -1) {
+    return jsonOutput({
+      ok: false,
+      error: `Ya existe un registro para "${collaborator}" en "${mes}".`,
+    });
+  }
+
+  sheet.appendRow(buildBaseRow(record));
+  Logger.log('addCollaborator: ' + collaborator + ' / ' + mes);
+  return jsonOutput({ ok: true, message: 'Colaborador agregado correctamente.' });
 }
 
 function addGoal(sheet, record) {
   const collaborator = String(record.colaborador || '').trim();
-  const mes = String(record.mes || '').trim();
-  const kpi = String(record.kpi || '').trim();
-  const meta = record.meta ?? '';
+  const mes          = String(record.mes         || '').trim();
+  const kpi          = String(record.kpi         || '').trim();
+  const meta         = record.meta ?? '';
 
   if (!collaborator || !mes || !kpi) {
     return jsonOutput({
       ok: false,
-      error: 'Para crear meta se requiere colaborador, mes y KPI.'
+      error: 'Se requieren colaborador, mes y KPI.',
+    });
+  }
+
+  const rowIndex = findRow(sheet, collaborator, mes);
+  if (rowIndex === -1) {
+    return jsonOutput({
+      ok: false,
+      error: 'No se encontró un registro para ese colaborador/mes.',
     });
   }
 
   const values = sheet.getDataRange().getValues();
-  let updated = false;
+  const row    = values[rowIndex];
+  let placed   = false;
 
-  for (let i = DATA_START_INDEX; i < values.length; i++) {
-    const row = values[i];
-    const rowCollaborator = String(row[3] || '').trim();
-    const rowMes = String(row[4] || '').trim();
+  for (let block = 0; block < LAYOUT.KPI_BLOCKS; block++) {
+    const base       = LAYOUT.KPI_BLOCK_OFFSET + block * LAYOUT.KPI_BLOCK_SIZE;
+    const currentKpi = String(row[base] || '').trim();
 
-    if (rowCollaborator === collaborator && rowMes === mes) {
-      for (let block = 0; block < 5; block++) {
-        const base = 6 + block * 4;
-        const currentKpi = String(row[base] || '').trim();
-
-        if (!currentKpi || currentKpi === kpi) {
-          sheet.getRange(i + 1, base + 1).setValue(kpi);
-          sheet.getRange(i + 1, base + 2).setValue(meta);
-          updated = true;
-          break;
-        }
-      }
-      if (updated) break;
+    if (!currentKpi || currentKpi === kpi) {
+      sheet.getRange(rowIndex + 1, base + 1).setValue(kpi);
+      sheet.getRange(rowIndex + 1, base + 2).setValue(meta);
+      placed = true;
+      break;
     }
   }
 
-  if (!updated) {
-    return jsonOutput({
-      ok: false,
-      error: 'No se encontró un registro del colaborador/mes para agregar la meta.'
-    });
+  if (!placed) {
+    return jsonOutput({ ok: false, error: 'No hay bloques KPI disponibles (máximo 5).' });
   }
 
-  return jsonOutput({
-    ok: true,
-    message: 'Meta/KPI agregado correctamente.'
-  });
+  Logger.log('addGoal: ' + collaborator + ' / ' + mes + ' / ' + kpi);
+  return jsonOutput({ ok: true, message: 'Meta/KPI agregado correctamente.' });
 }
 
 function updateResult(sheet, record) {
-  const collaborator = String(record.colaborador || '').trim();
-  const mes = String(record.mes || '').trim();
-  const kpi = String(record.kpi || '').trim();
-  const real = record.real ?? '';
+  const collaborator  = String(record.colaborador   || '').trim();
+  const mes           = String(record.mes           || '').trim();
+  const kpi           = String(record.kpi           || '').trim();
+  const real          = record.real ?? '';
   const observaciones = String(record.observaciones || '').trim();
 
   if (!collaborator || !mes) {
-    return jsonOutput({
-      ok: false,
-      error: 'Para actualizar resultado se requiere colaborador y mes.'
-    });
+    return jsonOutput({ ok: false, error: 'Se requieren colaborador y mes.' });
   }
 
-  const values = sheet.getDataRange().getValues();
-  let updated = false;
+  const rowIndex = findRow(sheet, collaborator, mes);
+  if (rowIndex === -1) {
+    return jsonOutput({ ok: false, error: 'No se encontró el registro para actualizar.' });
+  }
 
-  for (let i = DATA_START_INDEX; i < values.length; i++) {
-    const row = values[i];
-    const rowCollaborator = String(row[3] || '').trim();
-    const rowMes = String(row[4] || '').trim();
+  const values    = sheet.getDataRange().getValues();
+  const row       = values[rowIndex];
+  const rowNumber = rowIndex + 1;   // 1-based para getRange
+  let kpiUpdated  = false;
 
-    if (rowCollaborator === collaborator && rowMes === mes) {
-      if (kpi) {
-        for (let block = 0; block < 5; block++) {
-          const base = 6 + block * 4;
-          const currentKpi = String(row[base] || '').trim();
+  // ── Actualizar KPI específico ──
+  if (kpi) {
+    let kpiFound = false;
 
-          if (currentKpi === kpi) {
-            const metaCell = sheet.getRange(i + 1, base + 2);
-            const realCell = sheet.getRange(i + 1, base + 3);
-            const pctCell = sheet.getRange(i + 1, base + 4);
+    for (let block = 0; block < LAYOUT.KPI_BLOCKS; block++) {
+      const base       = LAYOUT.KPI_BLOCK_OFFSET + block * LAYOUT.KPI_BLOCK_SIZE;
+      const currentKpi = String(row[base] || '').trim();
 
-            realCell.setValue(real);
+      if (currentKpi === kpi) {
+        kpiFound = true;
+        const metaValue = Number(sheet.getRange(rowNumber, base + 2).getValue());
+        const realValue = Number(real);
 
-            const metaValue = Number(metaCell.getValue());
-            const realValue = Number(real);
+        sheet.getRange(rowNumber, base + 3).setValue(real);
 
-            if (!isNaN(metaValue) && metaValue !== 0 && !isNaN(realValue)) {
-              pctCell.setValue(realValue / metaValue);
-            }
-
-            updated = true;
-            break;
-          }
+        if (!isNaN(metaValue) && metaValue !== 0 && !isNaN(realValue)) {
+          sheet.getRange(rowNumber, base + 4).setValue(realValue / metaValue);
         }
-      }
 
-      if (observaciones) {
-        sheet.getRange(i + 1, 29).setValue(observaciones);
-        updated = true;
-      }
-
-      if (updated) {
-        recalculateRow(sheet, i + 1);
+        kpiUpdated = true;
         break;
       }
     }
+
+    if (!kpiFound) {
+      return jsonOutput({ ok: false, error: 'No se encontró el KPI "' + kpi + '" en ese registro.' });
+    }
   }
 
-  if (!updated) {
-    return jsonOutput({
-      ok: false,
-      error: 'No se encontró el registro para actualizar.'
-    });
+  // ── Actualizar observaciones ──
+  if (observaciones) {
+    sheet.getRange(rowNumber, LAYOUT.COL_OBSERVACIONES + 1).setValue(observaciones);
   }
 
-  return jsonOutput({
-    ok: true,
-    message: 'Resultado actualizado correctamente.'
-  });
+  if (!kpiUpdated && !observaciones) {
+    return jsonOutput({ ok: false, error: 'No se proporcionó KPI ni observaciones para actualizar.' });
+  }
+
+  recalculateRow(sheet, rowNumber);
+  Logger.log('updateResult: ' + collaborator + ' / ' + mes + ' / ' + kpi);
+  return jsonOutput({ ok: true, message: 'Resultado actualizado correctamente.' });
 }
 
-function recalculateRow(sheet, rowNumber) {
-  const row = sheet.getRange(rowNumber, 1, 1, 29).getValues()[0];
+// ─────────────────────────────────────────────────────────────────
+//  HELPERS INTERNOS
+// ─────────────────────────────────────────────────────────────────
 
+/**
+ * Devuelve el índice 0-based de la primera fila que coincide
+ * con colaborador + mes, o -1 si no existe.
+ */
+function findRow(sheet, collaborator, mes) {
+  const values = sheet.getDataRange().getValues();
+  for (let i = LAYOUT.DATA_START_INDEX; i < values.length; i++) {
+    const row = values[i];
+    if (
+      String(row[LAYOUT.COL_COLABORADOR] || '').trim() === collaborator &&
+      String(row[LAYOUT.COL_MES]         || '').trim() === mes
+    ) {
+      return i;
+    }
+  }
+  return -1;
+}
+
+/** Recalcula promedio y semáforo para una fila (rowNumber en 1-based). */
+function recalculateRow(sheet, rowNumber) {
+  const row         = sheet.getRange(rowNumber, 1, 1, MAPPED_HEADERS.length).getValues()[0];
   const percentages = [];
-  for (let block = 0; block < 5; block++) {
-    const pct = Number(row[9 + block * 4]);
-    if (!isNaN(pct)) percentages.push(pct);
+
+  for (let block = 0; block < LAYOUT.KPI_BLOCKS; block++) {
+    // Columna de Cumplimiento dentro del bloque = offset 3 (0-based dentro del bloque)
+    const pctIndex = LAYOUT.KPI_BLOCK_OFFSET + block * LAYOUT.KPI_BLOCK_SIZE + 3;
+    const val      = Number(row[pctIndex]);
+    if (!isNaN(val) && val !== 0) percentages.push(val);
   }
 
   const avg = percentages.length
     ? percentages.reduce((a, b) => a + b, 0) / percentages.length
     : 0;
 
-  sheet.getRange(rowNumber, 27).setValue(avg);
-
-  let semaforo = 'Rojo';
-  if (avg >= 0.85) semaforo = 'Verde';
-  else if (avg >= 0.70) semaforo = 'Amarillo';
-
-  sheet.getRange(rowNumber, 28).setValue(semaforo);
+  sheet.getRange(rowNumber, LAYOUT.COL_PROMEDIO      + 1).setValue(avg);
+  sheet.getRange(rowNumber, LAYOUT.COL_SEMAFORO      + 1).setValue(calcSemaforo(avg));
 }
 
+function calcSemaforo(avg) {
+  if (avg >= SEMAFORO.VERDE.min)    return SEMAFORO.VERDE.label;
+  if (avg >= SEMAFORO.AMARILLO.min) return SEMAFORO.AMARILLO.label;
+  return SEMAFORO.ROJO.label;
+}
+
+/** Construye la fila base para appendRow al agregar un colaborador. */
 function buildBaseRow(record) {
-  return [
-    record.pais || '',
-    record.area || '',
-    record.rol || '',
-    record.colaborador || '',
-    record.mes || '',
-    new Date().getFullYear(),
-    record.kpi || '', record.meta || '', record.real || '', '',
-    '', '', '', '',
-    '', '', '', '',
-    '', '', '', '',
-    '', '', '', '',
-    '',
-    '',
-    record.observaciones || ''
+  const ano = record.ano ? Number(record.ano) : new Date().getFullYear();
+
+  const row = [
+    record.pais          || '',
+    record.area          || '',
+    record.rol           || '',
+    record.colaborador   || '',
+    record.mes           || '',
+    ano,
   ];
+
+  // 5 bloques KPI vacíos
+  for (let block = 0; block < LAYOUT.KPI_BLOCKS; block++) {
+    row.push(
+      block === 0 ? (record.kpi  || '') : '',
+      block === 0 ? (record.meta || '') : '',
+      block === 0 ? (record.real || '') : '',
+      '',   // Cumplimiento (calculado)
+    );
+  }
+
+  row.push('');  // Promedio %
+  row.push('');  // Semáforo
+  row.push(record.observaciones || '');
+
+  return row;
 }
 
+/** Abre la hoja: primero por GID, luego por nombre, luego la primera. */
 function getTargetSheet(spreadsheetId, gid, sheetName) {
-  const ss = SpreadsheetApp.openById(spreadsheetId);
+  let ss;
+  try {
+    ss = SpreadsheetApp.openById(spreadsheetId);
+  } catch (err) {
+    throw new Error('No se pudo abrir el spreadsheet. Verifica el spreadsheetId.');
+  }
 
   if (gid) {
-    const byGid = ss.getSheets().find(s => String(s.getSheetId()) === gid);
+    const byGid = ss.getSheets().find(s => String(s.getSheetId()) === String(gid));
     if (byGid) return byGid;
   }
 
-  const byName = ss.getSheetByName(sheetName);
-  if (byName) return byName;
-
-  return ss.getSheets()[0];
+  return ss.getSheetByName(sheetName) || ss.getSheets()[0];
 }
 
+/** Serializa un objeto a JSON y lo devuelve como ContentService output. */
 function jsonOutput(obj) {
   return ContentService
     .createTextOutput(JSON.stringify(obj))
