@@ -3,697 +3,1075 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Panel KPI - Registro Mensual</title>
+  <title>Tablero KPI v3 Ejecutivo</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
-    :root {
-      --bg: #f6f8fb;
-      --card: #ffffff;
-      --text: #1f2937;
-      --muted: #6b7280;
-      --border: #d1d5db;
-      --primary: #2563eb;
-      --primary-hover: #1d4ed8;
-      --success: #16a34a;
-      --danger: #dc2626;
-      --warning: #d97706;
-      --shadow: 0 8px 24px rgba(15, 23, 42, 0.08);
-      --radius: 16px;
+    :root{
+      --bg:#f5f7fb;
+      --card:#ffffff;
+      --text:#1f2937;
+      --muted:#6b7280;
+      --line:#e5e7eb;
+      --primary:#2563eb;
+      --primary-dark:#1d4ed8;
+      --success:#16a34a;
+      --warning:#d97706;
+      --danger:#dc2626;
+      --shadow:0 8px 24px rgba(0,0,0,.08);
+      --radius:18px;
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      font-family:Arial, Helvetica, sans-serif;
+      background:var(--bg);
+      color:var(--text);
+    }
+    .container{
+      max-width:1480px;
+      margin:24px auto;
+      padding:0 16px 40px;
+    }
+    h1,h2,h3{margin-top:0}
+    .topbar{
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      gap:12px;
+      flex-wrap:wrap;
+      margin-bottom:18px;
+    }
+    .card{
+      background:var(--card);
+      border:1px solid var(--line);
+      border-radius:var(--radius);
+      box-shadow:var(--shadow);
+      padding:18px;
+      margin-bottom:18px;
+    }
+    .grid{
+      display:grid;
+      grid-template-columns:repeat(12,1fr);
+      gap:14px;
+    }
+    .col-12{grid-column:span 12}
+    .col-9{grid-column:span 9}
+    .col-8{grid-column:span 8}
+    .col-6{grid-column:span 6}
+    .col-4{grid-column:span 4}
+    .col-3{grid-column:span 3}
+    @media(max-width:1100px){
+      .col-9,.col-8,.col-6,.col-4,.col-3{grid-column:span 12}
     }
 
-    * {
-      box-sizing: border-box;
-      font-family: Arial, Helvetica, sans-serif;
+    label{
+      display:block;
+      margin-bottom:6px;
+      font-size:12px;
+      font-weight:bold;
+      color:var(--muted);
     }
 
-    body {
-      margin: 0;
-      background: var(--bg);
-      color: var(--text);
+    input,select,textarea,button{
+      font:inherit;
     }
 
-    .container {
-      max-width: 1200px;
-      margin: 32px auto;
-      padding: 0 16px 32px;
+    input,select,textarea{
+      width:100%;
+      padding:10px 12px;
+      border:1px solid #d1d5db;
+      border-radius:12px;
+      background:#fff;
+      outline:none;
     }
 
-    h1 {
-      margin: 0 0 8px;
-      font-size: 28px;
+    textarea{
+      min-height:90px;
+      resize:vertical;
     }
 
-    .subtitle {
-      color: var(--muted);
-      margin-bottom: 24px;
+    input:focus,select:focus,textarea:focus{
+      border-color:var(--primary);
     }
 
-    .card {
-      background: var(--card);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      box-shadow: var(--shadow);
-      padding: 20px;
-      margin-bottom: 20px;
+    .actions{
+      display:flex;
+      gap:10px;
+      flex-wrap:wrap;
+      align-items:center;
     }
 
-    .grid {
-      display: grid;
-      grid-template-columns: repeat(12, 1fr);
-      gap: 14px;
+    button{
+      border:none;
+      border-radius:12px;
+      padding:10px 14px;
+      cursor:pointer;
+      font-weight:bold;
     }
 
-    .col-12 { grid-column: span 12; }
-    .col-6 { grid-column: span 6; }
-    .col-4 { grid-column: span 4; }
-    .col-3 { grid-column: span 3; }
+    .btn{background:var(--primary); color:#fff}
+    .btn:hover{background:var(--primary-dark)}
+    .btn2{background:var(--success); color:#fff}
+    .btn3{background:var(--warning); color:#fff}
+    .btn4{background:#475569; color:#fff}
+    .btn5{background:#0f766e; color:#fff}
 
-    @media (max-width: 900px) {
-      .col-6, .col-4, .col-3 {
-        grid-column: span 12;
-      }
+    .status{
+      display:none;
+      padding:12px;
+      border-radius:12px;
+      margin-top:10px;
+      font-size:14px;
+    }
+    .ok{
+      display:block;
+      background:#ecfdf5;
+      color:#166534;
+      border:1px solid #86efac;
+    }
+    .error{
+      display:block;
+      background:#fef2f2;
+      color:#991b1b;
+      border:1px solid #fca5a5;
     }
 
-    label {
-      display: block;
-      font-size: 13px;
-      font-weight: bold;
-      margin-bottom: 6px;
-      color: var(--muted);
+    .metrics{
+      display:grid;
+      grid-template-columns:repeat(8,1fr);
+      gap:14px;
+    }
+    @media(max-width:1200px){
+      .metrics{grid-template-columns:repeat(4,1fr)}
+    }
+    @media(max-width:700px){
+      .metrics{grid-template-columns:repeat(2,1fr)}
     }
 
-    input, select, textarea {
-      width: 100%;
-      border: 1px solid var(--border);
-      border-radius: 10px;
-      padding: 10px 12px;
-      font-size: 14px;
-      outline: none;
-      background: #fff;
+    .metric{
+      background:linear-gradient(180deg,#fff,#f8fafc);
+      border:1px solid var(--line);
+      border-radius:16px;
+      padding:14px;
+    }
+    .metric .t{
+      font-size:12px;
+      color:var(--muted);
+      font-weight:bold;
+      text-transform:uppercase;
+      letter-spacing:.04em;
+    }
+    .metric .v{
+      font-size:28px;
+      font-weight:bold;
+      margin-top:8px;
     }
 
-    textarea {
-      min-height: 100px;
-      resize: vertical;
+    .table-wrap{
+      overflow:auto;
+      border:1px solid var(--line);
+      border-radius:16px;
     }
 
-    input:focus, select:focus, textarea:focus {
-      border-color: var(--primary);
+    table{
+      width:100%;
+      border-collapse:collapse;
+      min-width:1200px;
+      background:#fff;
     }
 
-    .actions {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 10px;
-      margin-top: 16px;
+    th,td{
+      border-bottom:1px solid var(--line);
+      padding:10px;
+      text-align:left;
+      vertical-align:top;
+      font-size:13px;
     }
 
-    button {
-      border: none;
-      background: var(--primary);
-      color: white;
-      padding: 11px 16px;
-      border-radius: 10px;
-      cursor: pointer;
-      font-size: 14px;
-      font-weight: bold;
+    th{
+      background:#f8fafc;
+      position:sticky;
+      top:0;
+      z-index:1;
     }
 
-    button:hover {
-      background: var(--primary-hover);
+    .tag{
+      display:inline-block;
+      padding:4px 8px;
+      border-radius:999px;
+      font-size:12px;
+      font-weight:bold;
+    }
+    .verde{background:#dcfce7;color:#166534}
+    .amarillo{background:#fef3c7;color:#92400e}
+    .rojo{background:#fee2e2;color:#991b1b}
+    .abierto{background:#fee2e2;color:#991b1b}
+    .respondido{background:#fef3c7;color:#92400e}
+    .cerrado{background:#dcfce7;color:#166534}
+
+    .small{font-size:12px;color:var(--muted)}
+    .hidden{display:none !important}
+
+    .detail-box{
+      border:1px solid var(--line);
+      border-radius:16px;
+      padding:16px;
+      background:#fafcff;
+      min-height:180px;
     }
 
-    button.secondary {
-      background: #475569;
+    .chart-box{
+      border:1px solid var(--line);
+      border-radius:16px;
+      padding:12px;
+      height:360px;
+      background:#fff;
     }
 
-    button.secondary:hover {
-      background: #334155;
+    pre{
+      background:#0f172a;
+      color:#e2e8f0;
+      padding:14px;
+      border-radius:12px;
+      overflow:auto;
+      margin:0;
+      font-size:12px;
     }
 
-    button.success {
-      background: var(--success);
-    }
-
-    button.success:hover {
-      background: #15803d;
-    }
-
-    button.warning {
-      background: var(--warning);
-    }
-
-    button.warning:hover {
-      background: #b45309;
-    }
-
-    .status {
-      margin-top: 14px;
-      padding: 12px 14px;
-      border-radius: 10px;
-      font-size: 14px;
-      display: none;
-    }
-
-    .status.ok {
-      display: block;
-      background: #ecfdf5;
-      color: #166534;
-      border: 1px solid #86efac;
-    }
-
-    .status.error {
-      display: block;
-      background: #fef2f2;
-      color: #991b1b;
-      border: 1px solid #fca5a5;
-    }
-
-    pre {
-      background: #0f172a;
-      color: #e2e8f0;
-      padding: 16px;
-      border-radius: 12px;
-      overflow: auto;
-      font-size: 13px;
-      line-height: 1.5;
-      margin: 0;
-    }
-
-    .section-title {
-      margin: 0 0 14px;
-      font-size: 18px;
-    }
-
-    .hint {
-      color: var(--muted);
-      font-size: 12px;
-      margin-top: 6px;
-    }
-
-    .table-wrap {
-      overflow: auto;
-      margin-top: 16px;
-    }
-
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      min-width: 1000px;
-    }
-
-    th, td {
-      border: 1px solid var(--border);
-      padding: 10px;
-      font-size: 13px;
-      text-align: left;
-      vertical-align: top;
-      background: #fff;
-    }
-
-    th {
-      background: #f3f4f6;
-      position: sticky;
-      top: 0;
-    }
-
-    .muted {
-      color: var(--muted);
-      font-size: 12px;
+    @media print {
+      body{background:#fff}
+      .no-print{display:none !important}
+      .card{box-shadow:none}
     }
   </style>
 </head>
 <body>
-  <div class="container">
-    <h1>Panel KPI - Registro Mensual</h1>
-    <div class="subtitle">
-      Cliente HTML para consumir tu Web App de Google Apps Script.
+<div class="container">
+  <div class="topbar no-print">
+    <div>
+      <h1>Tablero KPI v3 Ejecutivo</h1>
+      <div class="small">Resultados, filtros, gráficas, detalle por colaborador y bitácora de comentarios.</div>
     </div>
-
-    <div class="card">
-      <h2 class="section-title">Configuración</h2>
-      <div class="grid">
-        <div class="col-12">
-          <label for="webAppUrl">WEB_APP_URL</label>
-          <input id="webAppUrl" type="text" value="https://script.google.com/macros/s/TU_DEPLOYMENT_ID/exec" />
-        </div>
-
-        <div class="col-6">
-          <label for="spreadsheetId">SPREADSHEET_ID</label>
-          <input id="spreadsheetId" type="text" value="TU_SPREADSHEET_ID" />
-        </div>
-
-        <div class="col-6">
-          <label for="sheetName">Hoja</label>
-          <input id="sheetName" type="text" value="📊 Registro Mensual" />
-        </div>
-
-        <div class="col-6">
-          <label for="gid">GID (opcional)</label>
-          <input id="gid" type="text" placeholder="123456789" />
-        </div>
-
-        <div class="col-6">
-          <label for="adminKey">ADMIN_KEY</label>
-          <input id="adminKey" type="password" placeholder="Tu clave de administrador" />
-        </div>
-      </div>
-
-      <div class="actions">
-        <button onclick="healthCheck()">Health Check</button>
-        <button class="secondary" onclick="readRecords()">Leer registros</button>
-        <button class="secondary" onclick="clearOutput()">Limpiar salida</button>
-      </div>
-      <div class="hint">
-        Asegúrate de haber desplegado tu Apps Script como Web App con permisos correctos.
-      </div>
+    <div class="actions">
+      <button class="btn" onclick="healthCheck()">Health Check</button>
+      <button class="btn4" onclick="syncAll()">Sincronizar todo</button>
+      <button class="btn5" onclick="exportPDF()">Exportar PDF</button>
     </div>
+  </div>
 
-    <div class="card">
-      <h2 class="section-title">Agregar colaborador</h2>
-      <div class="grid">
-        <div class="col-4">
-          <label for="colPais">País</label>
-          <input id="colPais" type="text" placeholder="México" />
-        </div>
-        <div class="col-4">
-          <label for="colArea">Área</label>
-          <input id="colArea" type="text" placeholder="People" />
-        </div>
-        <div class="col-4">
-          <label for="colRol">Rol</label>
-          <input id="colRol" type="text" placeholder="Generalista RH" />
-        </div>
-
-        <div class="col-4">
-          <label for="colNombre">Colaborador</label>
-          <input id="colNombre" type="text" placeholder="María Pérez" />
-        </div>
-        <div class="col-4">
-          <label for="colMes">Mes</label>
-          <input id="colMes" type="text" placeholder="Marzo" />
-        </div>
-        <div class="col-4">
-          <label for="colAno">Año</label>
-          <input id="colAno" type="number" placeholder="2026" />
-        </div>
-
-        <div class="col-12">
-          <label for="colObservaciones">Observaciones</label>
-          <textarea id="colObservaciones" placeholder="Alta inicial"></textarea>
-        </div>
+  <div class="card no-print">
+    <div class="grid">
+      <div class="col-4">
+        <label>WEB_APP_URL</label>
+        <input id="webAppUrl" value="https://script.google.com/macros/s/TU_DEPLOYMENT_ID/exec">
       </div>
-
-      <div class="actions">
-        <button class="success" onclick="addCollaborator()">Agregar colaborador</button>
+      <div class="col-4">
+        <label>SPREADSHEET_ID</label>
+        <input id="spreadsheetId" value="TU_SPREADSHEET_ID">
+      </div>
+      <div class="col-4">
+        <label>Hoja</label>
+        <input id="sheetName" value="📊 Registro Mensual">
+      </div>
+      <div class="col-3">
+        <label>GID</label>
+        <input id="gid">
+      </div>
+      <div class="col-3">
+        <label>Rol UI</label>
+        <select id="userRole" onchange="applyRoleUI()">
+          <option value="viewer">Viewer</option>
+          <option value="admin">Admin</option>
+        </select>
+      </div>
+      <div class="col-3">
+        <label>Nombre visible</label>
+        <input id="userName" placeholder="Tu nombre">
+      </div>
+      <div class="col-3">
+        <label>ADMIN_KEY</label>
+        <input id="adminKey" type="password">
       </div>
     </div>
-
-    <div class="card">
-      <h2 class="section-title">Agregar KPI / Meta</h2>
-      <div class="grid">
-        <div class="col-4">
-          <label for="goalColaborador">Colaborador</label>
-          <input id="goalColaborador" type="text" placeholder="María Pérez" />
-        </div>
-        <div class="col-4">
-          <label for="goalMes">Mes</label>
-          <input id="goalMes" type="text" placeholder="Marzo" />
-        </div>
-        <div class="col-4">
-          <label for="goalKpi">KPI</label>
-          <input id="goalKpi" type="text" placeholder="Cobertura de vacantes" />
-        </div>
-
-        <div class="col-4">
-          <label for="goalMeta">Meta</label>
-          <input id="goalMeta" type="number" step="any" placeholder="95" />
-        </div>
-      </div>
-
-      <div class="actions">
-        <button class="success" onclick="addGoal()">Agregar KPI / Meta</button>
-      </div>
-    </div>
-
-    <div class="card">
-      <h2 class="section-title">Actualizar resultado</h2>
-      <div class="grid">
-        <div class="col-4">
-          <label for="updColaborador">Colaborador</label>
-          <input id="updColaborador" type="text" placeholder="María Pérez" />
-        </div>
-        <div class="col-4">
-          <label for="updMes">Mes</label>
-          <input id="updMes" type="text" placeholder="Marzo" />
-        </div>
-        <div class="col-4">
-          <label for="updKpi">KPI</label>
-          <input id="updKpi" type="text" placeholder="Cobertura de vacantes" />
-        </div>
-
-        <div class="col-4">
-          <label for="updReal">Real</label>
-          <input id="updReal" type="number" step="any" placeholder="90" />
-        </div>
-
-        <div class="col-12">
-          <label for="updObservaciones">Observaciones</label>
-          <textarea id="updObservaciones" placeholder="Resultado actualizado al cierre mensual"></textarea>
-        </div>
-      </div>
-
-      <div class="actions">
-        <button class="warning" onclick="updateResult()">Actualizar resultado</button>
-      </div>
-    </div>
-
     <div id="statusBox" class="status"></div>
+  </div>
 
-    <div class="card">
-      <h2 class="section-title">Respuesta JSON</h2>
-      <pre id="output">Sin resultados aún...</pre>
-    </div>
-
-    <div class="card">
-      <h2 class="section-title">Vista rápida de registros</h2>
-      <div class="table-wrap">
-        <table id="resultsTable">
-          <thead>
-            <tr id="tableHeadRow">
-              <th>Sin datos</th>
-            </tr>
-          </thead>
-          <tbody id="tableBody">
-            <tr>
-              <td class="muted">Haz clic en "Leer registros" para cargar información.</td>
-            </tr>
-          </tbody>
-        </table>
+  <div class="card no-print">
+    <h3>Filtros ejecutivos</h3>
+    <div class="grid">
+      <div class="col-3">
+        <label>Área</label>
+        <select id="filterArea" onchange="applyFilters()">
+          <option value="">Todas</option>
+        </select>
+      </div>
+      <div class="col-3">
+        <label>Mes</label>
+        <select id="filterMes" onchange="applyFilters()">
+          <option value="">Todos</option>
+        </select>
+      </div>
+      <div class="col-3">
+        <label>Año</label>
+        <select id="filterAno" onchange="applyFilters()">
+          <option value="">Todos</option>
+        </select>
+      </div>
+      <div class="col-3">
+        <label>Semáforo</label>
+        <select id="filterSemaforo" onchange="applyFilters()">
+          <option value="">Todos</option>
+          <option value="Verde">Verde</option>
+          <option value="Amarillo">Amarillo</option>
+          <option value="Rojo">Rojo</option>
+        </select>
+      </div>
+      <div class="col-6">
+        <label>Búsqueda libre</label>
+        <input id="filterText" placeholder="Colaborador, KPI, área..." oninput="applyFilters()">
+      </div>
+      <div class="col-6 actions" style="align-self:end">
+        <button class="btn4" onclick="resetFilters()">Limpiar filtros</button>
       </div>
     </div>
   </div>
 
-  <script>
-    function getConfig() {
-      return {
-        webAppUrl: document.getElementById('webAppUrl').value.trim(),
-        spreadsheetId: document.getElementById('spreadsheetId').value.trim(),
-        sheet: document.getElementById('sheetName').value.trim(),
-        gid: document.getElementById('gid').value.trim(),
-        adminKey: document.getElementById('adminKey').value.trim()
-      };
+  <div class="card">
+    <h3>Resumen ejecutivo</h3>
+    <div class="metrics">
+      <div class="metric"><div class="t">Registros</div><div class="v" id="mTotal">0</div></div>
+      <div class="metric"><div class="t">Promedio general</div><div class="v" id="mAvg">0%</div></div>
+      <div class="metric"><div class="t">Verde</div><div class="v" id="mGreen">0</div></div>
+      <div class="metric"><div class="t">Amarillo</div><div class="v" id="mYellow">0</div></div>
+      <div class="metric"><div class="t">Rojo</div><div class="v" id="mRed">0</div></div>
+      <div class="metric"><div class="t">Comentarios abiertos</div><div class="v" id="mOpen">0</div></div>
+      <div class="metric"><div class="t">Respondidos</div><div class="v" id="mAnswered">0</div></div>
+      <div class="metric"><div class="t">Cerrados</div><div class="v" id="mClosed">0</div></div>
+    </div>
+  </div>
+
+  <div class="grid">
+    <div class="col-6">
+      <div class="card">
+        <h3>Distribución por semáforo</h3>
+        <div class="chart-box">
+          <canvas id="chartSemaforo"></canvas>
+        </div>
+      </div>
+    </div>
+    <div class="col-6">
+      <div class="card">
+        <h3>Promedio por área</h3>
+        <div class="chart-box">
+          <canvas id="chartArea"></canvas>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="adminPanel" class="card hidden no-print">
+    <h3>Panel admin</h3>
+
+    <div class="grid">
+      <div class="col-3"><label>País</label><input id="aPais"></div>
+      <div class="col-3"><label>Área</label><input id="aArea"></div>
+      <div class="col-3"><label>Rol</label><input id="aRol"></div>
+      <div class="col-3"><label>Colaborador</label><input id="aColaborador"></div>
+      <div class="col-3"><label>Mes</label><input id="aMes"></div>
+      <div class="col-3"><label>Año</label><input id="aAno" type="number"></div>
+      <div class="col-12"><label>Observaciones</label><textarea id="aObs"></textarea></div>
+    </div>
+    <div class="actions" style="margin-top:10px">
+      <button class="btn2" onclick="addCollaborator()">Agregar colaborador</button>
+    </div>
+
+    <hr style="margin:18px 0;border:none;border-top:1px solid #e5e7eb">
+
+    <div class="grid">
+      <div class="col-3"><label>Colaborador</label><input id="gColaborador"></div>
+      <div class="col-3"><label>Mes</label><input id="gMes"></div>
+      <div class="col-3"><label>Año</label><input id="gAno" type="number"></div>
+      <div class="col-3"><label>KPI</label><input id="gKpi"></div>
+      <div class="col-3"><label>Meta</label><input id="gMeta" type="number" step="any"></div>
+    </div>
+    <div class="actions" style="margin-top:10px">
+      <button class="btn2" onclick="addGoal()">Agregar KPI / Meta</button>
+    </div>
+
+    <hr style="margin:18px 0;border:none;border-top:1px solid #e5e7eb">
+
+    <div class="grid">
+      <div class="col-3"><label>Colaborador</label><input id="rColaborador"></div>
+      <div class="col-3"><label>Mes</label><input id="rMes"></div>
+      <div class="col-3"><label>Año</label><input id="rAno" type="number"></div>
+      <div class="col-3"><label>KPI</label><input id="rKpi"></div>
+      <div class="col-3"><label>Real</label><input id="rReal" type="number" step="any"></div>
+      <div class="col-12"><label>Observaciones</label><textarea id="rObs"></textarea></div>
+    </div>
+    <div class="actions" style="margin-top:10px">
+      <button class="btn3" onclick="updateResult()">Actualizar resultado</button>
+    </div>
+  </div>
+
+  <div class="grid">
+    <div class="col-8">
+      <div class="card">
+        <h3>Resultados filtrados</h3>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Colaborador</th>
+                <th>Área</th>
+                <th>Mes</th>
+                <th>Año</th>
+                <th>Promedio</th>
+                <th>Semáforo</th>
+                <th>KPIs</th>
+                <th class="no-print">Comentario / pregunta</th>
+              </tr>
+            </thead>
+            <tbody id="resultsBody">
+              <tr><td colspan="8">Sin datos</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-4">
+      <div class="card">
+        <h3>Detalle por colaborador</h3>
+        <div id="detailBox" class="detail-box">
+          <div class="small">Selecciona un colaborador desde la tabla para ver detalle.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>Bitácora de comentarios</h3>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Fecha</th>
+            <th>Autor</th>
+            <th>Rol</th>
+            <th>Colaborador</th>
+            <th>Mes</th>
+            <th>Año</th>
+            <th>Comentario</th>
+            <th>Estatus</th>
+            <th class="no-print" id="adminCommentActions">Acción</th>
+          </tr>
+        </thead>
+        <tbody id="commentsBody">
+          <tr><td colspan="9">Sin comentarios</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="card no-print">
+    <h3>Respuesta JSON</h3>
+    <pre id="output">Sin resultados aún...</pre>
+  </div>
+</div>
+
+<script>
+let allRows = [];
+let filteredRows = [];
+let allComments = [];
+let chartSemaforo = null;
+let chartArea = null;
+
+function cfg() {
+  return {
+    webAppUrl: document.getElementById('webAppUrl').value.trim(),
+    spreadsheetId: document.getElementById('spreadsheetId').value.trim(),
+    sheet: document.getElementById('sheetName').value.trim(),
+    gid: document.getElementById('gid').value.trim(),
+    adminKey: document.getElementById('adminKey').value.trim(),
+    role: document.getElementById('userRole').value,
+    userName: document.getElementById('userName').value.trim() || 'Usuario'
+  };
+}
+
+function applyRoleUI() {
+  const isAdmin = cfg().role === 'admin';
+  document.getElementById('adminPanel').classList.toggle('hidden', !isAdmin);
+  const actionHead = document.getElementById('adminCommentActions');
+  if (actionHead) actionHead.style.display = isAdmin ? '' : 'none';
+}
+
+function showStatus(msg, isError = false) {
+  const box = document.getElementById('statusBox');
+  box.textContent = msg;
+  box.className = 'status ' + (isError ? 'error' : 'ok');
+}
+
+function setOutput(data) {
+  document.getElementById('output').textContent = JSON.stringify(data, null, 2);
+}
+
+async function apiGet(params) {
+  const query = new URLSearchParams();
+  Object.keys(params).forEach(k => {
+    if (params[k] !== undefined && params[k] !== null && String(params[k]).trim() !== '') {
+      query.append(k, params[k]);
     }
+  });
+  const res = await fetch(cfg().webAppUrl + '?' + query.toString(), { method: 'GET' });
+  return res.json();
+}
 
-    function showStatus(message, isError = false) {
-      const box = document.getElementById('statusBox');
-      box.textContent = message;
-      box.className = 'status ' + (isError ? 'error' : 'ok');
+async function apiPost(payload) {
+  const res = await fetch(cfg().webAppUrl, {
+    method: 'POST',
+    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+    body: JSON.stringify(payload)
+  });
+  return res.json();
+}
+
+async function healthCheck() {
+  try {
+    const c = cfg();
+    const data = await apiGet({
+      action: 'healthCheck',
+      spreadsheetId: c.spreadsheetId,
+      sheet: c.sheet,
+      gid: c.gid
+    });
+    setOutput(data);
+    if (data.ok) showStatus('Health check correcto.');
+    else showStatus(data.error || 'Error en health check.', true);
+  } catch (err) {
+    showStatus('Error de red: ' + err.message, true);
+  }
+}
+
+async function syncAll() {
+  await syncResults();
+  await syncComments();
+  updateExecutiveSummary();
+  renderComments();
+  renderCharts();
+}
+
+async function syncResults() {
+  const c = cfg();
+  const data = await apiGet({
+    action: 'read',
+    spreadsheetId: c.spreadsheetId,
+    sheet: c.sheet,
+    gid: c.gid
+  });
+
+  setOutput(data);
+
+  if (!data.ok) {
+    showStatus(data.error || 'No se pudo leer resultados.', true);
+    return;
+  }
+
+  allRows = data.data || [];
+  populateFilterOptions();
+  applyFilters();
+}
+
+async function syncComments() {
+  const c = cfg();
+  const data = await apiGet({
+    action: 'getComments',
+    spreadsheetId: c.spreadsheetId,
+    sheet: c.sheet,
+    gid: c.gid
+  });
+
+  if (!data.ok) {
+    setOutput(data);
+    showStatus(data.error || 'No se pudo leer comentarios.', true);
+    return;
+  }
+
+  allComments = data.data || [];
+}
+
+function populateFilterOptions() {
+  fillSelect('filterArea', uniqueSorted(allRows.map(r => r['Área'])));
+  fillSelect('filterMes', uniqueSorted(allRows.map(r => r['Mes'])));
+  fillSelect('filterAno', uniqueSorted(allRows.map(r => r['Año'])));
+}
+
+function fillSelect(id, values) {
+  const select = document.getElementById(id);
+  const current = select.value;
+  const firstOption = select.options[0].outerHTML;
+  select.innerHTML = firstOption + values
+    .filter(v => String(v || '').trim() !== '')
+    .map(v => `<option value="${escapeAttr(v)}">${escapeHtml(v)}</option>`)
+    .join('');
+  select.value = current;
+}
+
+function uniqueSorted(arr) {
+  return [...new Set(arr.map(v => String(v || '').trim()).filter(Boolean))].sort((a,b) => a.localeCompare(b, 'es'));
+}
+
+function applyFilters() {
+  const text = document.getElementById('filterText').value.trim().toLowerCase();
+  const area = document.getElementById('filterArea').value;
+  const mes = document.getElementById('filterMes').value;
+  const ano = document.getElementById('filterAno').value;
+  const sem = document.getElementById('filterSemaforo').value;
+
+  filteredRows = allRows.filter(r => {
+    const okText = !text || JSON.stringify(r).toLowerCase().includes(text);
+    const okArea = !area || String(r['Área'] || '') === area;
+    const okMes = !mes || String(r['Mes'] || '') === mes;
+    const okAno = !ano || String(r['Año'] || '') === ano;
+    const okSem = !sem || String(r['Semáforo'] || '') === sem;
+    return okText && okArea && okMes && okAno && okSem;
+  });
+
+  renderResults();
+  updateExecutiveSummary();
+  renderCharts();
+}
+
+function resetFilters() {
+  document.getElementById('filterText').value = '';
+  document.getElementById('filterArea').value = '';
+  document.getElementById('filterMes').value = '';
+  document.getElementById('filterAno').value = '';
+  document.getElementById('filterSemaforo').value = '';
+  applyFilters();
+}
+
+function updateExecutiveSummary() {
+  const baseRows = filteredRows.length ? filteredRows : [];
+  let green = 0, yellow = 0, red = 0, sum = 0, count = 0;
+
+  baseRows.forEach(r => {
+    const sem = String(r['Semáforo'] || '').trim().toLowerCase();
+    if (sem === 'verde') green++;
+    else if (sem === 'amarillo') yellow++;
+    else if (sem === 'rojo') red++;
+
+    const avg = parsePct(r['Promedio %']);
+    if (!isNaN(avg)) {
+      sum += avg;
+      count++;
     }
+  });
 
-    function setOutput(data) {
-      document.getElementById('output').textContent = JSON.stringify(data, null, 2);
+  let open = 0, answered = 0, closed = 0;
+  allComments.forEach(c => {
+    const s = String(c.Estatus || '').trim().toLowerCase();
+    if (s === 'abierto') open++;
+    else if (s === 'respondido') answered++;
+    else if (s === 'cerrado') closed++;
+  });
+
+  document.getElementById('mTotal').textContent = baseRows.length;
+  document.getElementById('mAvg').textContent = count ? ((sum / count) * 100).toFixed(1) + '%' : '0%';
+  document.getElementById('mGreen').textContent = green;
+  document.getElementById('mYellow').textContent = yellow;
+  document.getElementById('mRed').textContent = red;
+  document.getElementById('mOpen').textContent = open;
+  document.getElementById('mAnswered').textContent = answered;
+  document.getElementById('mClosed').textContent = closed;
+}
+
+function renderResults() {
+  const body = document.getElementById('resultsBody');
+  if (!filteredRows.length) {
+    body.innerHTML = '<tr><td colspan="8">Sin datos</td></tr>';
+    document.getElementById('detailBox').innerHTML = '<div class="small">No hay registros para mostrar.</div>';
+    return;
+  }
+
+  body.innerHTML = filteredRows.map((r, idx) => `
+    <tr onclick="showDetail(${idx})" style="cursor:pointer">
+      <td><strong>${escapeHtml(r['Colaborador'] || '')}</strong></td>
+      <td>${escapeHtml(r['Área'] || '')}</td>
+      <td>${escapeHtml(r['Mes'] || '')}</td>
+      <td>${escapeHtml(r['Año'] || '')}</td>
+      <td>${formatPct(r['Promedio %'])}</td>
+      <td>${renderSemaforo(r['Semáforo'])}</td>
+      <td>${renderKpis(r)}</td>
+      <td class="no-print">
+        <textarea id="comment_${idx}" placeholder="Escribe un comentario o pregunta"></textarea>
+        <div style="margin-top:8px">
+          <button class="btn" onclick="event.stopPropagation(); sendComment(${idx})">Enviar comentario</button>
+        </div>
+      </td>
+    </tr>
+  `).join('');
+
+  showDetail(0);
+}
+
+function showDetail(idx) {
+  const r = filteredRows[idx];
+  if (!r) return;
+
+  const relatedComments = allComments.filter(c =>
+    String(c.Colaborador || '') === String(r['Colaborador'] || '') &&
+    String(c.Mes || '') === String(r['Mes'] || '') &&
+    String(c['Año'] || '') === String(r['Año'] || '')
+  );
+
+  document.getElementById('detailBox').innerHTML = `
+    <h4 style="margin:0 0 10px">${escapeHtml(r['Colaborador'] || '')}</h4>
+    <div class="small" style="margin-bottom:10px">
+      Área: ${escapeHtml(r['Área'] || '')} | Mes: ${escapeHtml(r['Mes'] || '')} | Año: ${escapeHtml(r['Año'] || '')}
+    </div>
+    <div style="margin-bottom:10px"><strong>Promedio:</strong> ${formatPct(r['Promedio %'])}</div>
+    <div style="margin-bottom:10px"><strong>Semáforo:</strong> ${renderSemaforo(r['Semáforo'])}</div>
+    <div style="margin-bottom:10px"><strong>Observaciones:</strong><br>${escapeHtml(r['Observaciones'] || 'Sin observaciones')}</div>
+    <div><strong>Comentarios relacionados:</strong></div>
+    <div style="margin-top:8px">
+      ${
+        relatedComments.length
+          ? relatedComments.slice().reverse().map(c => `
+            <div style="padding:8px 0;border-bottom:1px solid #e5e7eb">
+              <div class="small">${escapeHtml(c.Timestamp || '')} - ${escapeHtml(c.Autor || '')} (${escapeHtml(c.Rol || '')})</div>
+              <div>${escapeHtml(c.Comentario || '')}</div>
+              <div style="margin-top:4px">${renderCommentStatus(c.Estatus)}</div>
+            </div>
+          `).join('')
+          : '<div class="small">No hay comentarios para este registro.</div>'
+      }
+    </div>
+  `;
+}
+
+function renderComments() {
+  const body = document.getElementById('commentsBody');
+  const isAdmin = cfg().role === 'admin';
+
+  if (!allComments.length) {
+    body.innerHTML = '<tr><td colspan="9">Sin comentarios</td></tr>';
+    return;
+  }
+
+  body.innerHTML = allComments.slice().reverse().map(c => `
+    <tr>
+      <td>${escapeHtml(c.Timestamp || '')}</td>
+      <td>${escapeHtml(c.Autor || '')}</td>
+      <td>${escapeHtml(c.Rol || '')}</td>
+      <td>${escapeHtml(c.Colaborador || '')}</td>
+      <td>${escapeHtml(c.Mes || '')}</td>
+      <td>${escapeHtml(c['Año'] || '')}</td>
+      <td>${escapeHtml(c.Comentario || '')}</td>
+      <td>${renderCommentStatus(c.Estatus)}</td>
+      <td class="no-print" style="display:${isAdmin ? '' : 'none'}">
+        <select onchange="changeCommentStatus(${c._rowNumber}, this.value)">
+          <option value="">Cambiar</option>
+          <option value="Abierto">Abierto</option>
+          <option value="Respondido">Respondido</option>
+          <option value="Cerrado">Cerrado</option>
+        </select>
+      </td>
+    </tr>
+  `).join('');
+}
+
+function renderKpis(r) {
+  let html = '';
+  for (let i = 1; i <= 5; i++) {
+    const k = r['KPI' + i];
+    if (String(k || '').trim()) {
+      html += `<div style="margin-bottom:6px">
+        <strong>${escapeHtml(k)}</strong><br>
+        <span class="small">
+          Meta: ${escapeHtml(r['Meta' + i] || '')}
+          | Real: ${escapeHtml(r['Real' + i] || '')}
+          | Cumpl: ${formatPct(r['Cumplimiento' + i])}
+        </span>
+      </div>`;
     }
+  }
+  return html || 'Sin KPIs';
+}
 
-    function clearOutput() {
-      document.getElementById('output').textContent = 'Sin resultados aún...';
-      document.getElementById('tableHeadRow').innerHTML = '<th>Sin datos</th>';
-      document.getElementById('tableBody').innerHTML = '<tr><td class="muted">Salida limpiada.</td></tr>';
-      const box = document.getElementById('statusBox');
-      box.style.display = 'none';
-      box.className = 'status';
-      box.textContent = '';
+function renderSemaforo(value) {
+  const v = String(value || '').trim();
+  const cls = v.toLowerCase() === 'verde' ? 'verde' : v.toLowerCase() === 'amarillo' ? 'amarillo' : 'rojo';
+  return `<span class="tag ${cls}">${escapeHtml(v || 'Sin dato')}</span>`;
+}
+
+function renderCommentStatus(value) {
+  const v = String(value || '').trim();
+  const cls = v.toLowerCase() || 'abierto';
+  return `<span class="tag ${cls}">${escapeHtml(v || 'Abierto')}</span>`;
+}
+
+function renderCharts() {
+  renderSemaforoChart();
+  renderAreaChart();
+}
+
+function renderSemaforoChart() {
+  const counts = { Verde: 0, Amarillo: 0, Rojo: 0 };
+  filteredRows.forEach(r => {
+    const s = String(r['Semáforo'] || '').trim();
+    if (counts[s] !== undefined) counts[s]++;
+  });
+
+  const ctx = document.getElementById('chartSemaforo');
+  if (chartSemaforo) chartSemaforo.destroy();
+
+  chartSemaforo = new Chart(ctx, {
+    type: 'doughnut',
+    data: {
+      labels: ['Verde', 'Amarillo', 'Rojo'],
+      datasets: [{
+        data: [counts.Verde, counts.Amarillo, counts.Rojo]
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false
     }
+  });
+}
 
-    function buildQuery(params) {
-      const query = new URLSearchParams();
-      Object.keys(params).forEach(key => {
-        if (params[key] !== undefined && params[key] !== null && String(params[key]).trim() !== '') {
-          query.append(key, params[key]);
-        }
-      });
-      return query.toString();
+function renderAreaChart() {
+  const groups = {};
+  filteredRows.forEach(r => {
+    const area = String(r['Área'] || 'Sin área');
+    const avg = parsePct(r['Promedio %']);
+    if (!isNaN(avg)) {
+      if (!groups[area]) groups[area] = [];
+      groups[area].push(avg);
     }
+  });
 
-    async function apiGet(params) {
-      const { webAppUrl } = getConfig();
-      const query = buildQuery(params);
-      const url = webAppUrl + '?' + query;
+  const labels = Object.keys(groups);
+  const values = labels.map(a => {
+    const arr = groups[a];
+    return arr.reduce((x, y) => x + y, 0) / arr.length * 100;
+  });
 
-      const response = await fetch(url, {
-        method: 'GET'
-      });
+  const ctx = document.getElementById('chartArea');
+  if (chartArea) chartArea.destroy();
 
-      return response.json();
-    }
-
-    async function apiPost(payload) {
-      const { webAppUrl } = getConfig();
-
-      const response = await fetch(webAppUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'text/plain;charset=utf-8'
-        },
-        body: JSON.stringify(payload)
-      });
-
-      return response.json();
-    }
-
-    async function healthCheck() {
-      try {
-        const config = getConfig();
-
-        const data = await apiGet({
-          action: 'healthCheck',
-          spreadsheetId: config.spreadsheetId,
-          sheet: config.sheet,
-          gid: config.gid
-        });
-
-        setOutput(data);
-
-        if (data.ok) {
-          showStatus('Health Check exitoso.');
-        } else {
-          showStatus(data.error || 'Error en Health Check.', true);
-        }
-      } catch (error) {
-        showStatus('Error de red: ' + error.message, true);
-        setOutput({ ok: false, error: error.message });
+  chartArea = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [{
+        label: 'Promedio %',
+        data: values
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      scales: {
+        y: { beginAtZero: true, max: 100 }
       }
     }
+  });
+}
 
-    async function readRecords() {
-      try {
-        const config = getConfig();
-
-        const data = await apiGet({
-          action: 'read',
-          spreadsheetId: config.spreadsheetId,
-          sheet: config.sheet,
-          gid: config.gid
-        });
-
-        setOutput(data);
-
-        if (data.ok) {
-          showStatus('Lectura completada. Total registros: ' + (data.total || 0));
-          renderTable(data.data || []);
-        } else {
-          showStatus(data.error || 'Error al leer registros.', true);
-          renderTable([]);
-        }
-      } catch (error) {
-        showStatus('Error de red: ' + error.message, true);
-        setOutput({ ok: false, error: error.message });
-        renderTable([]);
-      }
+async function addCollaborator() {
+  const c = cfg();
+  const payload = {
+    action: 'addCollaborator',
+    spreadsheetId: c.spreadsheetId,
+    sheet: c.sheet,
+    gid: c.gid,
+    adminKey: c.adminKey,
+    record: {
+      pais: val('aPais'),
+      area: val('aArea'),
+      rol: val('aRol'),
+      colaborador: val('aColaborador'),
+      mes: val('aMes'),
+      ano: numOrEmpty('aAno'),
+      observaciones: val('aObs')
     }
+  };
+  const data = await apiPost(payload);
+  setOutput(data);
+  if (data.ok) {
+    showStatus(data.message || 'Colaborador agregado.');
+    await syncAll();
+  } else {
+    showStatus(data.error || 'Error.', true);
+  }
+}
 
-    async function addCollaborator() {
-      try {
-        const config = getConfig();
-
-        const payload = {
-          action: 'addCollaborator',
-          spreadsheetId: config.spreadsheetId,
-          sheet: config.sheet,
-          gid: config.gid,
-          adminKey: config.adminKey,
-          record: {
-            pais: document.getElementById('colPais').value.trim(),
-            area: document.getElementById('colArea').value.trim(),
-            rol: document.getElementById('colRol').value.trim(),
-            colaborador: document.getElementById('colNombre').value.trim(),
-            mes: document.getElementById('colMes').value.trim(),
-            ano: normalizeNumberOrEmpty(document.getElementById('colAno').value),
-            observaciones: document.getElementById('colObservaciones').value.trim()
-          }
-        };
-
-        const data = await apiPost(payload);
-        setOutput(data);
-
-        if (data.ok) {
-          showStatus(data.message || 'Colaborador agregado correctamente.');
-          await readRecords();
-        } else {
-          showStatus(data.error || 'Error al agregar colaborador.', true);
-        }
-      } catch (error) {
-        showStatus('Error de red: ' + error.message, true);
-        setOutput({ ok: false, error: error.message });
-      }
+async function addGoal() {
+  const c = cfg();
+  const payload = {
+    action: 'addGoal',
+    spreadsheetId: c.spreadsheetId,
+    sheet: c.sheet,
+    gid: c.gid,
+    adminKey: c.adminKey,
+    record: {
+      colaborador: val('gColaborador'),
+      mes: val('gMes'),
+      ano: numOrEmpty('gAno'),
+      kpi: val('gKpi'),
+      meta: numOrEmpty('gMeta')
     }
+  };
+  const data = await apiPost(payload);
+  setOutput(data);
+  if (data.ok) {
+    showStatus(data.message || 'KPI agregado.');
+    await syncAll();
+  } else {
+    showStatus(data.error || 'Error.', true);
+  }
+}
 
-    async function addGoal() {
-      try {
-        const config = getConfig();
-
-        const payload = {
-          action: 'addGoal',
-          spreadsheetId: config.spreadsheetId,
-          sheet: config.sheet,
-          gid: config.gid,
-          adminKey: config.adminKey,
-          record: {
-            colaborador: document.getElementById('goalColaborador').value.trim(),
-            mes: document.getElementById('goalMes').value.trim(),
-            kpi: document.getElementById('goalKpi').value.trim(),
-            meta: normalizeNumberOrEmpty(document.getElementById('goalMeta').value)
-          }
-        };
-
-        const data = await apiPost(payload);
-        setOutput(data);
-
-        if (data.ok) {
-          showStatus(data.message || 'KPI/meta agregado correctamente.');
-          await readRecords();
-        } else {
-          showStatus(data.error || 'Error al agregar KPI/meta.', true);
-        }
-      } catch (error) {
-        showStatus('Error de red: ' + error.message, true);
-        setOutput({ ok: false, error: error.message });
-      }
+async function updateResult() {
+  const c = cfg();
+  const payload = {
+    action: 'updateResult',
+    spreadsheetId: c.spreadsheetId,
+    sheet: c.sheet,
+    gid: c.gid,
+    adminKey: c.adminKey,
+    record: {
+      colaborador: val('rColaborador'),
+      mes: val('rMes'),
+      ano: numOrEmpty('rAno'),
+      kpi: val('rKpi'),
+      real: numOrEmpty('rReal'),
+      observaciones: val('rObs')
     }
+  };
+  const data = await apiPost(payload);
+  setOutput(data);
+  if (data.ok) {
+    showStatus(data.message || 'Resultado actualizado.');
+    await syncAll();
+  } else {
+    showStatus(data.error || 'Error.', true);
+  }
+}
 
-    async function updateResult() {
-      try {
-        const config = getConfig();
+async function sendComment(idx) {
+  const c = cfg();
+  const row = filteredRows[idx];
+  const comment = document.getElementById('comment_' + idx).value.trim();
 
-        const kpi = document.getElementById('updKpi').value.trim();
-        const realValue = document.getElementById('updReal').value;
-        const observaciones = document.getElementById('updObservaciones').value.trim();
+  if (!comment) {
+    showStatus('Escribe un comentario antes de enviar.', true);
+    return;
+  }
 
-        const record = {
-          colaborador: document.getElementById('updColaborador').value.trim(),
-          mes: document.getElementById('updMes').value.trim()
-        };
-
-        if (kpi) {
-          record.kpi = kpi;
-        }
-
-        if (realValue !== '') {
-          record.real = normalizeNumberOrEmpty(realValue);
-        }
-
-        if (document.getElementById('updObservaciones').value !== '') {
-          record.observaciones = observaciones;
-        }
-
-        const payload = {
-          action: 'updateResult',
-          spreadsheetId: config.spreadsheetId,
-          sheet: config.sheet,
-          gid: config.gid,
-          adminKey: config.adminKey,
-          record: record
-        };
-
-        const data = await apiPost(payload);
-        setOutput(data);
-
-        if (data.ok) {
-          showStatus(data.message || 'Resultado actualizado correctamente.');
-          await readRecords();
-        } else {
-          showStatus(data.error || 'Error al actualizar resultado.', true);
-        }
-      } catch (error) {
-        showStatus('Error de red: ' + error.message, true);
-        setOutput({ ok: false, error: error.message });
-      }
+  const payload = {
+    action: 'addComment',
+    spreadsheetId: c.spreadsheetId,
+    sheet: c.sheet,
+    gid: c.gid,
+    record: {
+      colaborador: row['Colaborador'],
+      mes: row['Mes'],
+      ano: row['Año'],
+      author: c.userName,
+      comment: comment
     }
+  };
 
-    function normalizeNumberOrEmpty(value) {
-      if (value === '' || value === null || value === undefined) {
-        return '';
-      }
-      const n = Number(value);
-      return Number.isNaN(n) ? value : n;
+  const data = await apiPost(payload);
+  setOutput(data);
+  if (data.ok) {
+    showStatus(data.message || 'Comentario enviado.');
+    document.getElementById('comment_' + idx).value = '';
+    await syncComments();
+    updateExecutiveSummary();
+    renderComments();
+    showDetail(idx);
+  } else {
+    showStatus(data.error || 'Error al comentar.', true);
+  }
+}
+
+async function changeCommentStatus(rowNumber, estatus) {
+  if (!estatus) return;
+  const c = cfg();
+
+  const payload = {
+    action: 'updateCommentStatus',
+    spreadsheetId: c.spreadsheetId,
+    sheet: c.sheet,
+    gid: c.gid,
+    adminKey: c.adminKey,
+    record: {
+      rowNumber,
+      estatus
     }
+  };
 
-    function renderTable(rows) {
-      const head = document.getElementById('tableHeadRow');
-      const body = document.getElementById('tableBody');
+  const data = await apiPost(payload);
+  setOutput(data);
+  if (data.ok) {
+    showStatus('Estatus actualizado.');
+    await syncComments();
+    updateExecutiveSummary();
+    renderComments();
+  } else {
+    showStatus(data.error || 'Error al actualizar estatus.', true);
+  }
+}
 
-      if (!Array.isArray(rows) || rows.length === 0) {
-        head.innerHTML = '<th>Sin datos</th>';
-        body.innerHTML = '<tr><td class="muted">No hay registros para mostrar.</td></tr>';
-        return;
-      }
+function exportPDF() {
+  window.print();
+}
 
-      const preferredColumns = [
-        '_rowNumber',
-        'País',
-        'Área',
-        'Rol',
-        'Colaborador',
-        'Mes',
-        'Año',
-        'KPI1',
-        'Meta1',
-        'Real1',
-        'Cumplimiento1',
-        'KPI2',
-        'Meta2',
-        'Real2',
-        'Cumplimiento2',
-        'Promedio %',
-        'Semáforo',
-        'Observaciones'
-      ];
+function val(id) {
+  return document.getElementById(id).value.trim();
+}
 
-      const firstRow = rows[0];
-      const columns = preferredColumns.filter(col => Object.prototype.hasOwnProperty.call(firstRow, col));
+function numOrEmpty(id) {
+  const v = document.getElementById(id).value;
+  if (v === '') return '';
+  const n = Number(v);
+  return isNaN(n) ? v : n;
+}
 
-      head.innerHTML = columns.map(col => '<th>' + escapeHtml(col) + '</th>').join('');
+function parsePct(value) {
+  const raw = String(value ?? '').trim();
+  if (!raw) return NaN;
+  const n = parseFloat(raw.replace('%', ''));
+  if (isNaN(n)) return NaN;
+  return n > 1 ? n / 100 : n;
+}
 
-      body.innerHTML = rows.map(row => {
-        const tds = columns.map(col => '<td>' + formatCell(row[col]) + '</td>').join('');
-        return '<tr>' + tds + '</tr>';
-      }).join('');
-    }
+function formatPct(value) {
+  const n = parsePct(value);
+  return isNaN(n) ? '' : (n * 100).toFixed(1) + '%';
+}
 
-    function formatCell(value) {
-      if (value === null || value === undefined || value === '') {
-        return '';
-      }
-      return escapeHtml(String(value));
-    }
+function escapeHtml(text) {
+  return String(text ?? '')
+    .replaceAll('&','&amp;')
+    .replaceAll('<','&lt;')
+    .replaceAll('>','&gt;')
+    .replaceAll('"','&quot;')
+    .replaceAll("'","&#039;");
+}
 
-    function escapeHtml(text) {
-      return String(text)
-        .replaceAll('&', '&amp;')
-        .replaceAll('<', '&lt;')
-        .replaceAll('>', '&gt;')
-        .replaceAll('"', '&quot;')
-        .replaceAll("'", '&#039;');
-    }
-  </script>
+function escapeAttr(text) {
+  return String(text ?? '')
+    .replaceAll('&','&amp;')
+    .replaceAll('"','&quot;')
+    .replaceAll('<','&lt;')
+    .replaceAll('>','&gt;');
+}
+
+applyRoleUI();
+</script>
 </body>
 </html>
